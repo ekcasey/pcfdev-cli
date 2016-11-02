@@ -8,6 +8,7 @@ import (
 	cfplugin "github.com/cloudfoundry/cli/plugin"
 	"github.com/pivotal-cf/pcfdev-cli/config"
 	"github.com/pivotal-cf/pcfdev-cli/plugin/cmd"
+	"github.com/pivotal-cf/pcfdev-cli/ssh"
 )
 
 type Plugin struct {
@@ -60,7 +61,16 @@ func (p *Plugin) Run(cliConnection cfplugin.CliConnection, args []string) {
 	}
 	if err := cmd.Run(); err != nil {
 		p.UI.Failed(getErrorText(err))
-		p.Exit.Exit(1)
+		p.exitWithError(err)
+	}
+}
+
+func (p *Plugin) exitWithError(err error) {
+	_, hasStatusCode := err.(*ssh.ExitError)
+	if hasStatusCode {
+		p.Exit.Exit(49)
+	} else {
+		p.Exit.Exit(50)
 	}
 }
 

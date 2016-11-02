@@ -123,7 +123,17 @@ func (s *SSH) StartSSHSession(addresses []SSHAddress, privateKey []byte, timeout
 		return err
 	}
 
-	return session.Wait()
+	if err := session.Wait(); err != nil {
+		errorWithStatusCode, hasErrorCode := err.(*ssh.ExitError)
+		if hasErrorCode {
+			return &ExitError{StatusCode: errorWithStatusCode.Waitmsg.ExitStatus(), Err: err}
+		} else {
+			return err
+		}
+
+	}
+
+	return nil
 }
 
 func (s *SSH) WaitForSSH(addresses []SSHAddress, privateKey []byte, timeout time.Duration) error {

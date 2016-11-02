@@ -337,6 +337,37 @@ var _ = Describe("ssh", func() {
 					Expect(err).To(MatchError("some-error"))
 				})
 			})
+
+			Context("when exiting after the last command", func() {
+				It("should keep the exit code of the last command", func() {
+					stdinX, stdoutX, _ := term.StdStreams()
+					stdinFd, _ := term.GetFdInfo(stdinX)
+					stdoutFd, _ := term.GetFdInfo(stdoutX)
+					winsize := &term.Winsize{}
+
+					go func() {
+						time.Sleep(5 * time.Second)
+						interrupt := "\x03"
+						fmt.Fprintln(stdin, interrupt)
+						fmt.Fprintln(stdin, "exit")
+					}()
+
+					terminalState := &term.State{}
+
+					mockTerminal.EXPECT().GetFdInfo(stdin).Return(stdinFd)
+					mockTerminal.EXPECT().GetFdInfo(stdout).Return(stdoutFd)
+					mockTerminal.EXPECT().SetRawTerminal(stdinFd).Return(terminalState, nil)
+					mockTerminal.EXPECT().GetWinSize(stdoutFd).Return(winsize, nil)
+					mockWindowsResizer.EXPECT().StartResizing(gomock.Any())
+					mockWindowsResizer.EXPECT().StopResizing()
+					mockTerminal.EXPECT().RestoreTerminal(stdinFd, terminalState)
+
+					err := s.StartSSHSession([]ssh.SSHAddress{{IP: ip, Port: port}}, privateKeyBytes, 5 * time.Minute, stdin, stdout, stderr)
+					Expect(err.(*ssh.ExitError).StatusCode).To(Equal(130))
+					Expect(err.(*ssh.ExitError)).To(MatchError(ContainSubstring("Process exited")))
+					Expect(err.(*ssh.ExitError)).To(MatchError(ContainSubstring("130")))
+				})
+			})
 		})
 
 		Context("when there is an error creating the ssh session", func() {

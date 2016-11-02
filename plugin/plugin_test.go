@@ -13,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-cf/pcfdev-cli/ssh"
 )
 
 var _ = Describe("Plugin", func() {
@@ -87,6 +88,20 @@ var _ = Describe("Plugin", func() {
 					mockCmd.EXPECT().Run().Return(errors.New("some-error")),
 					mockUI.EXPECT().Failed("Error: some-error."),
 					mockExit.EXPECT().Exit(1),
+				)
+
+				pcfdev.Run(fakeCliConnection, []string{"dev", "some-command"})
+			})
+		})
+
+		Context("when running the command fails with a status code", func() {
+			It("should print the error and exit with the same status code", func() {
+				gomock.InOrder(
+					mockCmdBuilder.EXPECT().Cmd("some-command").Return(mockCmd, nil),
+					mockCmd.EXPECT().Parse([]string{}),
+					mockCmd.EXPECT().Run().Return(&ssh.ExitError{StatusCode: 23, Err: errors.New("some-error-message")}),
+					mockUI.EXPECT().Failed("Error: some-error-message."),
+					mockExit.EXPECT().Exit(23),
 				)
 
 				pcfdev.Run(fakeCliConnection, []string{"dev", "some-command"})
