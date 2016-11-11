@@ -7,13 +7,14 @@ import (
 	"path/filepath"
 
 	cMD5 "crypto/md5"
+	"io"
+	"os"
+	"os/exec"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"io"
-	"os"
-	"os/exec"
 )
 
 const (
